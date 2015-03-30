@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MMOVIT</title>
+    <link rel="stylesheet" href="javascripts/components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="javascripts/components/bootstrap/dist/css/bootstrap-theme.min.css">
+    <script src="javascripts/lib/angular.js"></script>
+    <script src="javascripts/angularApp.js"></script>
+    <script src="javascripts/lib/angular-ui-router.js"></script>
+
+
+    <style> .glyphicon-play, .glyphicon-repeat, .glyphicon-pencil, .glyphicon-trash, .glyphicon-wrench { cursor:pointer } </style>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      <![endif]-->
+
+  </head>
+  <body ng-app="MMOVIT">
+
+    <div class="container-fluid">
+
+        <ui-view></ui-view>
+
+    </div>
+
+    <script type="text/ng-template" id="/transcripts.html">
+
+        <div class="row">
+            <ol class="breadcrumb">
+                <li><a href="#" ng-click="goHome()">Projects</a></li>
+                <li class="active">{{project.projectname}}</li>
+            </ol>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <h1>{{project.projectname}}</h1>
+            </div>
+            <div class="col-lg-6 text-right" ng-hide="setup" style="margin-top:20px">
+                <button type="button" class="btn" ng-click="setup=true">Setup Transcription</button>
+            </div>
+            <div class="col-lg-6 text-right" style="margin-top:20px">
+                <button type="button" class="btn btn-primary" ng-show="setup" ng-click="saveTranscriptionSettings()">Save Settings</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <video src="{{videofile}}" mmovit-video ng-model="start" controls preload="" width="100%"></video>
+            </div>
+
+            <div class="col-lg-8">
+
+                <div class="panel panel-default" ng-show="setup">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Transcription Settings</h3>
+                    </div>
+                    <div class="panel-body">
+                        <h4>Modi</h4>
+                        <table class="table">
+                            <tr>
+                                <th width="30%">Name</th>
+                                <th width="70%">Description</th>
+                                <th></th>
+                            </tr>
+                            <tr ng-repeat="modus in modi">
+
+                                <td>
+                                    <span ng-dblclick="openNameFormForId(modus._id)" ng-hide="nameform == modus._id">{{modus.modusName}}</span>
+                                    <span ng-show="nameform == modus._id">
+                                        <form ng-submit="submitNameChangeForId(modus)">
+                                            <input type="text" ng-model="modus.modusName">
+                                        </form>
+                                    </span>
+
+                                </td>
+                                <td>
+                                    <span ng-dblclick="openDescriptionFormForId(modus._id)" ng-hide="descriptionform==modus._id">{{modus.modusDescription}}</span>
+                                    <span ng-show="descriptionform==modus._id">
+                                        <form ng-submit="submitDescriptionChangeForId(modus)">
+                                            <input type="text" ng-model="modus.modusDescription">
+                                        </form>
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="glyphicon glyphicon-trash" ng-click="removeModus(modus)"></span>
+                                </td>
+
+                            </tr>
+                        </table>
+
+                        <div class="text-right">
+                            <button type="button" class="btn btn-default" aria-label="Add" ng-click="addNewModus()">
+                                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                            </button>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <div ng-hide="setup">
+                    <form ng-submit="addTranscript()" accept-charset="utf-8">
+                        <div class="form-group">
+                            <select class="form-control" ng-model="modus" ng-options="modus._id as modus.modusName for modus in modi" ></select>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="commentbox" class="form-control" placeholder="Comment" ng-model="comment" ng-keypress="pauseVideoPlayback()">
+                        </div>
+                        <button type="button" class="btn btn-primary" ng-click="addTranscript()">Add</button>
+                    </form>
+
+                    <h2>Transcripts for {{project.projectname}}</h2>
+
+                    <table class='table table-hover'>
+                        <tr>
+                            <th width="10%">Start</th>
+                            <th width="8%"></th>
+                            <th ng-repeat="modus in modi | orderBy: 'sequenceNumber' ">{{modus.modusName}}</th>
+                            <th width="8%"></th>
+                        </tr>
+                        <tr ng-repeat="entry in transcripts | orderBy: '-start' ">
+                            <td>
+                                {{entry.start | numberTimeFormat}}
+                            </td>
+                            <td>
+                                <span class="glyphicon glyphicon-play" ng-click="playVideoAt(entry.start)"></span>
+                                <span class="glyphicon glyphicon-repeat" ng-click="playAndSkipAt(entry.start)"></span>
+                            </td>
+                            <td ng-repeat="modus in entry.modi |  orderBy: 'sequenceNumber' ">
+                                {{modus.comment}}
+                            </td>
+                            <td>
+                                <span class="glyphicon glyphicon-pencil" ng-click="editTranscript(entry)"></span>
+                                <span class="glyphicon glyphicon-trash" ng-click="trashTranscript(entry)"></span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/ng-template" id="/editTranscript.html">
+
+        <div class="row">
+
+            <div class="col-lg-6">
+                <video src="images/Nose_Barbara.m4v" mmovit-video ng-model="transcript.start" controls preload="" width="100%"></video>
+            </div>
+
+            <div class="col-lg-6">
+                <h2>Edit Transcription</h2>
+                <form ng-submit="updateTranscript()" accept-charset="utf-8">
+                    <div class="form-group">
+                        <select class="form-control" ng-model="modus" ng-options="modus._id as modus.modusName for modus in modi" ></select>
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-control" rows="4" ng-model="comment"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" ng-model="transcript.start">
+                    </div>
+                    <button type="button" class="btn btn-primary" ng-click="updateTranscript(transcript)">Save</button>
+                    <button type="button" class="btn" ng-click="cancelUpdate(transcript)">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+    </script>
+
+    <script type="text/ng-template" id="/projects.html">
+
+        <div class="row">
+
+            <div class="col-lg-3"></div>
+
+            <div class="col-lg-6">
+                <div class="page-header">
+                    <h1>Multi-Modal Video Transcriptions <small>MMOVIT</small></h1>
+
+                    <p>A research project.</p>
+                </div>
+
+                <div style="margin-top:50px">
+                    <table class="table" style="border:1px solid rgb(221,221,221)">
+                        <tr>
+                            <th width="100%">My Projects</th>
+                            <th>
+                                <button type="button" class="btn btn-default btn-sm" aria-label="Add" data-toggle="modal" data-target="#createModal">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                                </button>
+                            </th>
+                        </tr>
+                        <tr ng-repeat="project in projects">
+                            <td>
+                                <a href='#/projects/{{project._id}}'>{{project.projectname}}</a> 
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#{{project._id}}">Edit</button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+
+                <div id="createModal" role="dialog" tabindex="-1" class="modal fade">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title">Add Project</h4>
+                            </div>
+                            <div class="modal-body">
+                                <form ng-submit="addProject()" accept-charset="utf-8">
+                                    <div class="form-group">
+                                        <input type="text" class="form-control" ng-model="projectName" placeholder="Project name">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="text" class="form-control" ng-model="projectVideo" placeholder="Filename of video">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="addProject()">Add Project</button>
+                            </div>
+                        </div><!-- /.modal-content -->
+                    </div><!-- /.modal-dialog -->
+                </div><!-- /.modal -->
+
+                <div ng-repeat="project in projects" id="{{project._id}}" role="dialog" tabindex="-1" class="modal fade">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title">Project Settings</h4>
+                            </div>
+                            <div class="modal-body">
+                                
+                                <form ng-submit="addProject()" accept-charset="utf-8">
+                                    <div class="form-group">
+                                        <input type="text" class="form-control" ng-model="project.projectname" placeholder="Project name">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="text" class="form-control" ng-model="project.videofile" placeholder="Filename of video">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <div class="text-left" style="width:50%;float:left">
+                                    <button type="button" class="text-left btn btn-danger" data-dismiss="modal" ng-click="deleteProject(project)">Delete Project</button>
+                                </div>
+                                <div style="width:50%;float:left">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="updateProject(project)">Save Project</button>
+                                </div>
+                            </div>
+                        </div><!-- /.modal-content -->
+                    </div><!-- /.modal-dialog -->
+                </div><!-- /.modal -->
+
+            </div>
+
+            <div class="col-lg-3"></div>
+
+        </div>
+
+    </script>
+
+    <script src="javascripts/components/jquery/dist/jquery.min.js"></script>
+    <script src="javascripts/components/bootstrap/dist/js/bootstrap.min.js"></script>
+</body>
+</html>
